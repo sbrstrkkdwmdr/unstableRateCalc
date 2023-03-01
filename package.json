@@ -12,5 +12,13 @@
     "url": "git+https://github.com/sbrstrkkdwmdr/unstableratecalc.git"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.14.2",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "osu-parsers": "^4.0.0",
+    "osureplayparser": "^1.0.1"
+  }
 }

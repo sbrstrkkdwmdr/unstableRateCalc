@@ -1,3 +1,6 @@
+import * as op from 'osu-parsers';
+import * as osr from 'osureplayparser';
+
 type keyInput = {
     x: number;
     y: number;
@@ -83,6 +86,14 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
  * @param osrPath path to the .osr replay file
  * @param mapPath path to the .osu beatmap file
  */
-export function get(osrPath:string, mapPath: string){
-    
+export async function get(osrPath: string, mapPath: string) {
+    const initObjs = await getHitobjects(mapPath);
 }
+
+async function getHitobjects(mapPath: string) {
+    const decoder = new op.BeatmapDecoder();
+
+    const beatmap = await decoder.decodeFromPath(mapPath, false);
+
+    
+};
