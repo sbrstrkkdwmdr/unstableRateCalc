@@ -57,6 +57,15 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
             const curHit = clicks[i];
             if (!curHit) break;
             let isMiss = false;
+
+//             console.log(
+//                 `Comparing:
+// Obj: ${JSON.stringify(curObj)}
+// Hit: ${JSON.stringify(curHit)}
+// `
+//             );
+//             console.log(hitc.length);
+//             console.log(clicks.length);
             if (
                 inRange(curObj.time - curHit.time, hitTimeRange) &&
                 inRange(
@@ -65,13 +74,14 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
                 )
             ) {
                 clicks.splice(0, j - 1);
+                j = 0;
                 times.push(Math.abs(curObj.time - curHit.time));
                 break;
             } else {
                 missedHits++;
                 isMiss = true;
             }
-            if (j == clicks.length && isMiss == true) {
+            if (j >= clicks.length && isMiss == true) {
                 missedCircles++;
                 break;
             }
@@ -100,17 +110,20 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
 export async function get(osrPath: string, mapPath: string) {
     const initObjs = await getHitobjects(mapPath);
 
-    const initReplay = osr.parseReplay(osrPath);
+    const scDecorder = new op.ScoreDecoder();
+
+    const initScore = await scDecorder.decodeFromPath(osrPath, true);
+
+    const initReplay = initScore.replay;
+    //osr.parseReplay(osrPath);
 
     const hitObjects: keyInput[] = [];
 
-    fs.writeFileSync('objects.json', JSON.stringify(initObjs), 'utf-8');
-    fs.writeFileSync('replay.json', JSON.stringify(initReplay), 'utf-8');
-
+    fs.writeFileSync('debug_objects.json', JSON.stringify(initObjs, null, 2), 'utf-8');
+    fs.writeFileSync('debug_replay.json', JSON.stringify(initScore, null, 2), 'utf-8');
 
     for (let i = 0; i < initObjs.objects.length; i++) {
         const curObj = initObjs.objects[i];
-
         hitObjects.push({
             x: curObj.startPosition.x,
             y: curObj.startPosition.y,
@@ -120,40 +133,28 @@ export async function get(osrPath: string, mapPath: string) {
 
     const replayHits: keyInput[] = [];
 
-    let time = 0;
+    let initTime = 0;
 
-    for (let i = 0; i < initReplay.replay_data.length; i++) {
-        const curHit = initReplay.replay_data[i];
-        const prevHit = initReplay.replay_data[i - 1];
+    if (initReplay.frames[0].startTime < 0) {
+        initTime = Math.abs(initReplay.frames[0].startTime);
+    }
+
+    for (let i = 0; i < initReplay.frames.length; i++) {
+        const curHit = initReplay.frames[i];
+        const prevHit = initReplay.frames[i - 1];
         if (!curHit) break;
 
-        time += curHit.timeSinceLastAction;
-        const ctapped = curHit.keysPressed;
-        let prevTappedLeft;
-        let prevTappedRight;
-        if (prevHit) {
-            const ptapped = prevHit.keysPressed;
-            prevTappedLeft = ptapped.K1 || ptapped.M1;
-            prevTappedRight = ptapped.K2 || ptapped.M2;
-        } else {
-            prevTappedLeft = false;
-            prevTappedRight = false;
-        }
-
-        //if left is tapped w/o prev left being tapped OR right is tapped w/o prev right being tapped
-        if ((
-            (ctapped.K1 || ctapped.M1) &&
-            !prevTappedLeft) || (
-                (ctapped.K2 || ctapped.M2) &&
-                !prevTappedRight
-            )) {
+        if (curHit.buttonState > 0 && curHit.buttonState != prevHit?.buttonState) {
             replayHits.push({
-                x: curHit.x,
-                y: curHit.y,
-                time: (initReplay.replay_data.slice(0, i)).reduce((a, b) => b + a)
+                x: curHit.mouseX,
+                y: curHit.mouseY,
+                time: initTime + curHit.startTime
             });
         }
     }
+
+    fs.writeFileSync('debug_useHits.json', JSON.stringify(replayHits, null, 2));
+    fs.writeFileSync('debug_useCircles.json', JSON.stringify(hitObjects, null, 2));
 
     return doAll(hitObjects, replayHits, initObjs.r, initObjs.tr);
 }
