@@ -1,4 +1,6 @@
+import fs from 'fs';
 import * as op from 'osu-parsers';
+import * as osumodcalc from 'osumodcalculator';
 import * as osr from 'osureplayparser';
 
 type keyInput = {
@@ -53,6 +55,7 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
         if (!curObj || clicks.length < 1) break;
         for (let j = 0; j < clicks.length; j++) {
             const curHit = clicks[i];
+            if (!curHit) break;
             let isMiss = false;
             if (
                 inRange(curObj.time - curHit.time, hitTimeRange) &&
@@ -74,9 +77,17 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
             }
         }
     }
+    let unstableRate = NaN;
+    try {
+        unstableRate = (times.reduce((a, b) => b + a)) / 10;
+    } catch (err) {
+        console.log(times);
+    }
+
     ed.objects_missed = missedCircles;
     ed.clicks_missed = missedHits;
-    ed.unstableRate = (times.reduce((a, b) => b + a)) / 10;
+    ed.unstableRate = unstableRate;
+
 
     return ed;
 }
@@ -91,7 +102,21 @@ export async function get(osrPath: string, mapPath: string) {
 
     const initReplay = osr.parseReplay(osrPath);
 
-    const hitObjects = [];
+    const hitObjects: keyInput[] = [];
+
+    fs.writeFileSync('objects.json', JSON.stringify(initObjs), 'utf-8');
+    fs.writeFileSync('replay.json', JSON.stringify(initReplay), 'utf-8');
+
+
+    for (let i = 0; i < initObjs.objects.length; i++) {
+        const curObj = initObjs.objects[i];
+
+        hitObjects.push({
+            x: curObj.startPosition.x,
+            y: curObj.startPosition.y,
+            time: curObj.startTime
+        });
+    }
 
     const replayHits: keyInput[] = [];
 
@@ -104,15 +129,21 @@ export async function get(osrPath: string, mapPath: string) {
 
         time += curHit.timeSinceLastAction;
         const ctapped = curHit.keysPressed;
-        const ptapped = prevHit.keysPressed;
+        let prevTapped;
+        if (prevHit) {
+            const ptapped = prevHit.keysPressed;
+            prevTapped = ptapped.K1 || ptapped.K2 || ptapped.M1 || ptapped.M2;
+        } else {
+            prevTapped = false;
+        }
         if (
             (ctapped.K1 || ctapped.K2 || ctapped.M1 || ctapped.M2) &&
-            !(ptapped.K1 || ptapped.K2 || ptapped.M1 || ptapped.M2)
+            !prevTapped
         ) {
             replayHits.push({
                 x: curHit.x,
                 y: curHit.y,
-                time: time
+                time: (initReplay.replay_data.slice(0, i)).reduce((a, b) => b + a)
             });
         }
     }
@@ -122,12 +153,11 @@ export async function get(osrPath: string, mapPath: string) {
 
 async function getHitobjects(mapPath: string) {
     const decoder = new op.BeatmapDecoder();
-
     const beatmap = await decoder.decodeFromPath(mapPath, false);
 
     return {
-        objects: [],
-        r: 0,
-        tr: 0,
+        objects: beatmap.hitObjects,
+        r: osumodcalc.csToRadius(beatmap.difficulty._CS),
+        tr: osumodcalc.ODtoms(beatmap.difficulty._OD).hitwindow_50,
     };
 };
