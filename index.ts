@@ -129,17 +129,24 @@ export async function get(osrPath: string, mapPath: string) {
 
         time += curHit.timeSinceLastAction;
         const ctapped = curHit.keysPressed;
-        let prevTapped;
+        let prevTappedLeft;
+        let prevTappedRight;
         if (prevHit) {
             const ptapped = prevHit.keysPressed;
-            prevTapped = ptapped.K1 || ptapped.K2 || ptapped.M1 || ptapped.M2;
+            prevTappedLeft = ptapped.K1 || ptapped.M1;
+            prevTappedRight = ptapped.K2 || ptapped.M2;
         } else {
-            prevTapped = false;
+            prevTappedLeft = false;
+            prevTappedRight = false;
         }
-        if (
-            (ctapped.K1 || ctapped.K2 || ctapped.M1 || ctapped.M2) &&
-            !prevTapped
-        ) {
+
+        //if left is tapped w/o prev left being tapped OR right is tapped w/o prev right being tapped
+        if ((
+            (ctapped.K1 || ctapped.M1) &&
+            !prevTappedLeft) || (
+                (ctapped.K2 || ctapped.M2) &&
+                !prevTappedRight
+            )) {
             replayHits.push({
                 x: curHit.x,
                 y: curHit.y,
