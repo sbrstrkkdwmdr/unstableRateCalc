@@ -88,6 +88,36 @@ function doAll(hitcircles: keyInput[], clicks: keyInput[], radius: number, hitTi
  */
 export async function get(osrPath: string, mapPath: string) {
     const initObjs = await getHitobjects(mapPath);
+
+    const initReplay = osr.parseReplay(osrPath);
+
+    const hitObjects = [];
+
+    const replayHits: keyInput[] = [];
+
+    let time = 0;
+
+    for (let i = 0; i < initReplay.replay_data.length; i++) {
+        const curHit = initReplay.replay_data[i];
+        const prevHit = initReplay.replay_data[i - 1];
+        if (!curHit) break;
+
+        time += curHit.timeSinceLastAction;
+        const ctapped = curHit.keysPressed;
+        const ptapped = prevHit.keysPressed;
+        if (
+            (ctapped.K1 || ctapped.K2 || ctapped.M1 || ctapped.M2) &&
+            !(ptapped.K1 || ptapped.K2 || ptapped.M1 || ptapped.M2)
+        ) {
+            replayHits.push({
+                x: curHit.x,
+                y: curHit.y,
+                time: time
+            });
+        }
+    }
+
+    return doAll(hitObjects, replayHits, initObjs.r, initObjs.tr);
 }
 
 async function getHitobjects(mapPath: string) {
@@ -95,5 +125,9 @@ async function getHitobjects(mapPath: string) {
 
     const beatmap = await decoder.decodeFromPath(mapPath, false);
 
-    
+    return {
+        objects: [],
+        r: 0,
+        tr: 0,
+    };
 };
