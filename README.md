@@ -10,4 +10,9 @@
 
 ## about
 calculates the unstable rate from an `.osr` file </br>
-notelock kinda broken
+notelock kinda broken </br>
+
+## stuff
+`89ers - Go Go Go Go! (Radio Edit) (Nightcore & Cut Ver.) [T-T-T-Tell Me Why!]` </br>
+beatmap => `osu.ppy.sh/b/3635433` [osu!](https://osu.ppy.sh/beatmapsets/1775229#osu/3635433)</br>
+replay => [youtube](https://www.youtube.com/watch?v=LV6EOzGKLK4)</br>
